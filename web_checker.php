@@ -7,6 +7,8 @@ use PHPMailer\PHPMailer\Exception;
 require 'vendor/autoload.php';
 
 $mail = new PHPMailer(true);
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+$dotenv->load();
 
 function sendEmail($to, $subject, $message)
 {
@@ -17,12 +19,14 @@ function sendEmail($to, $subject, $message)
         
         $mail->SMTPDebug = SMTP::DEBUG_SERVER; 
         $mail->isSMTP();
-        $mail->Host       = 'email-smtp.us-east-1.amazonaws.com';
+        $mail->Host       = $_ENV['AWS_HOST'];
         $mail->SMTPAuth   = true; 
-        $mail->Username   = 'AKIA6I6FJTMQ4CEO4K5Z'; 
-        $mail->Password   = 'BKvHm22fPnAMosVW+3YUpGNtqasnfy45jiwhjn4Z1srw'; 
+        $mail->Username   = $_ENV['AWS_USERNAME']; 
+        $mail->Password   = $_ENV['AWS_PASSWORD']; 
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS; 
-        $mail->Port       = 587; 
+        $mail->Port       = 587;
+        $mail->SMTPDebug = false;
+        $mail->do_debug = 0; 
 
         $mail->setFrom('no-reply@osky.dev');
         $mail->addAddress($to);
@@ -68,6 +72,8 @@ if (file_exists($jsonFilePath)) {
         foreach ($data['urls'] as $url) {
             $url = trim($url);
 
+            echo 'Checking website '. $url . "<br>" ;
+
             if (empty($url)) {
                 continue;
             }
@@ -75,7 +81,14 @@ if (file_exists($jsonFilePath)) {
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            
             $content = curl_exec($ch);
+
+            if(curl_errno($ch) == CURLE_OPERATION_TIMEOUTED) {
+                writeLog("Timeout fetching content from $url");
+                continue;
+            }
 
             if ($content === false) {
                 writeLog("Failed to fetch content from $url: " . curl_error($ch));
@@ -90,6 +103,8 @@ if (file_exists($jsonFilePath)) {
                     $message = "Error message: $errorMessage";
                     writeLog($message);
                     sendEmail("fazila.azhari@osky.com.au", $subject, $message);
+                    sendEmail("kin.ng@osky.com.au", $subject, $message);
+                    
                 }
             }
 
