@@ -87,7 +87,7 @@ if (file_exists($jsonFilePath)) {
             foreach ($errorMessages as $errorMessage) {
                 if (strpos($content, $errorMessage) !== false) {
                     $subject = "Error found on $url";
-                    $message = "Error message: $errorMessage\n\nContent:\n$content";
+                    $message = "Error message: $errorMessage";
                     writeLog($message);
                     sendEmail("fazila.azhari@osky.com.au", $subject, $message);
                 }
